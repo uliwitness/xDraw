@@ -1,0 +1,5 @@
+TO DO LIST FOR xDRAW 2.0:
+
+• Release xDraw 1.x sources to public.
+• add Appearance drawing calls (map to our own code if Appearance missing)
+• Change resources instead of delete/recreate

@@ -1,0 +1,44 @@
+11/23/94
+
+Making 'Safe Fat Routine Descriptors' for code resources.
+Please see MixedMode.r for information about what a Safe Fat RoutineDescriptor is.
+
+This several step process requires that you use Rez with either MPW or
+ToolServer (both of which are on your CD).  
+
+Important:  When preparing the PPC half of the fat resource, use the Code Resource
+project type and the "None" header.  The "Native" header puts a routine descriptor 
+at the beginning of the resource but it isn't a fat routine descriptor.  It also isn't 
+safe.  A safe routine descriptor has some 68K code at the beginning that tests the 
+environment to see if it is safe to execute PPC code without crashing and then 
+executes the proper code resource.  You want to create a stripped down code 
+resource without a routine descriptor.  Rez will then take the 'safe' 68K code, 
+a routine descriptor which has routine records for both resources, the 68K resource 
+and the PPC resource and then combines them into a code resource of the desired type 
+and ID.  See NIM "PowerPC System Software" for what a private resource is.  
+ 
+1.  Compile the projects XCMD68K_C.π and XCMDPPC_C.π.  You will note that the 
+	project type for XCMDPPC_C.π is Code Resource and the header type is "None".  
+	Two output files are created:  68K Resource and PPC Resource.
+	
+2.	You know need to get the hex version of your main entry's ProcInfoType.  The easy
+	way is disassemble the PPC source code that contains the variable __procinfo.
+	The dump window will show you the proper value.  Alternatively, you can
+	open the project ProcInfo.π found in "-CW Code Resource Info:__procinfo:".  
+	It will help you to determine the correct value for the ProcInfo field of the 
+	Rez file "FatCodeResource.r". Hint:  it is 0xC0.
+		
+4.	Use Rez again to make the safe fat code resource from PPC Resource and 
+	68K Resource.  Set the directory to "Code Resource Examples:XCMDs:Fat C XCMD" and paste 
+	this into your worksheet:
+	rez -a FatCodeResource.r -o "AppleEvent Stack" 
+	Select the entire line and press either the Enter key by itself or Command-Return.
+	
+5.	Run AppleEvent Stack and Stderr. Click the Press here button.
+
+6.  If you want a fat resource instead of a safe fat resource (a fat resource
+	will crash on a 68K machine--a safe fat one won't crash), change 
+	FatCodeResource.r all instances of 'sdes' to 'fdes'.
+	
+Mark Anderson
+metrowerks

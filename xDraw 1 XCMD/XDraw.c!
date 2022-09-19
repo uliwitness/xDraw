@@ -1,0 +1,210 @@
+global myPicHandle:picHandle
+
+on XDraw mode,opcodes
+  if mode = "?" then return help()
+  if mode = "!" then return copyright()
+  if mode = "Draw" then
+    Do_DrawStuff opcodes
+  else if mode = "SetPic" then
+    Do_SetPicStuff opcodes
+  else if mode = "NoPic" then
+    Do_NoPicStuff
+  else if item 1 of mode = "within" then
+    return Do_WithinStuff(opcodes,(item 2 of mode),(item 3 of mode))
+  else
+    return "Error: Invalid mode selector. Modes must be 'Draw','SetPic','NoPic' or 'within'."
+  end if
+end XDraw
+
+function Do_WithinStuff opcodes,ptH,ptV
+  put NewRgn() into myRegion
+  if myRegion = nil then return "Error: Not enough memory."
+  OpenRgn
+  Do_DrawStuff opcodes
+  CloseRgn myRegion
+  if emptyRgn(myRegion) then return "Error: Not enough memory/Maximum region size exceeded."
+  SetPt myPoint,ptH,ptV
+  if PtInRgn(myPoint,myRegion) then
+    DisposeRgn myRegion
+    return TRUE
+  else
+    DisposeRgn myRegion
+    return FALSE
+  end if
+end Do_WithinStuff
+
+on Do_SetPicStuff opcodes
+  put FrontDocWindow() into winPtr
+  SetRect myPicFrame@,0,0,(height of this cd),(width of this cd)
+  put OpenPicture(myPicFrame@) into myPicture
+  Do_DrawStuff opcodes
+  ClosePicture
+  if myPicture = nil then return "Error: Not enough memory"
+  setWindowPic winPtr,myPicture -- set windowPic field
+  InvalRect winPtr@.portRect -- force an update so it will draw
+end Do_SetPicStuff
+
+on Do_NoPicStuff
+  put FrontDocWindow() into winPtr
+  put getWindowPic(winPtr) into myPicture
+  setWindowPic winPtr,nil -- clear windowPic field
+  InvalRect winPtr@.portRect -- force an update so it will draw
+  killPicture myPicture
+end Do_NoPicStuff
+
+on Do_DrawStuff opcodes
+  PenNormal
+  repeat with x = 1 to (number of lines of opcodes)
+    if identical(item 1 of line x of opcodes,"line") then
+      MoveTo (item 2 of line x of opcodes),(item 3 of line x of opcodes)
+      LineTo (item 4 of line x of opcodes),(item 5 of line x of opcodes)
+    else if identical(item 1 of line x of opcodes,"rect") then
+      SetRect myRect@,(item 2 of line x of opcodes),(item 3 of line x of opcodes),¬
+      (item 4 of line x of opcodes),(item 5 of line x of opcodes)
+      if item 6 of line x of opcodes = "Fill" or item 6 of line x of opcodes = "TRUE" then
+        PaintRect myRect@
+      else
+        FrameRect myRect@
+      end if
+    else if identical(item 1 of line x of opcodes,"oval") then
+      SetRect myRect@,(item 2 of line x of opcodes),(item 3 of line x of opcodes),¬
+      (item 4 of line x of opcodes),(item 5 of line x of opcodes)
+      if item 6 of line x of opcodes = "Fill" or item 6 of line x of opcodes = "TRUE" then
+        PaintOval myRect@
+      else
+        FrameOval myRect@
+      end if
+    else if identical(item 1 of line x of opcodes,"pSiz") then
+      PenSize (item 2 of line x of opcodes),(item 3 of line x of opcodes)
+    else if identical(item 1 of line x of opcodes,"fCol") then
+      if item 2 of line x of opcodes = "white" then
+        ForeColor whiteColor
+      else if item 2 of line x of opcodes = "black" then
+        ForeColor blackColor
+      else if item 2 of line x of opcodes = "yellow" then
+        ForeColor yellowColor
+      else if item 2 of line x of opcodes = "magenta" then
+        ForeColor magentaColor
+      else if item 2 of line x of opcodes = "red" then
+        ForeColor redColor
+      else if item 2 of line x of opcodes = "cyan" then
+        ForeColor cyanColor
+      else if item 2 of line x of opcodes = "green" then
+        ForeColor greenColor
+      else if item 2 of line x of opcodes = "blue" then
+        ForeColor blueColor
+      end if
+    else if identical(item 1 of line x of opcodes,"rRec") then
+      SetRect myRect@,(item 2 of line x of opcodes),(item 3 of line x of opcodes),¬
+      (item 4 of line x of opcodes),(item 5 of line x of opcodes)
+      if item 7 of line x of opcodes ≠ 0 then
+        put item 7 of line x of opcodes into ow
+      else
+        put 15 into ow
+      end if
+      if item 8 of line x of opcodes ≠ 0 then
+        put item 8 of line x of opcodes into oh
+      else
+        put 15 into oh
+      end if
+      if item 6 of line x of opcodes = "Fill" or item 6 of line x of opcodes = "TRUE" then
+        PaintRoundRect myRect@,ow,oh
+      else
+        FrameRoundRect myRect@,ow,oh
+      end if
+    else if identical(item 1 of line x of opcodes,"pMod") then
+      if item 2 of line x of opcodes = "Copy" then
+        PenMode patCopy
+      else if item 2 of line x of opcodes = "Or" then
+        PenMode patOr
+      else if item 2 of line x of opcodes = "XOr" then
+        PenMode patXOr
+      else if item 2 of line x of opcodes = "Bic" then
+        PenMode patBic
+      else if item 2 of line x of opcodes = "notCopy" then
+        PenMode notPatCopy
+      else if item 2 of line x of opcodes = "notOr" then
+        PenMode notPatOr
+      else if item 2 of line x of opcodes = "notXOr" then
+        PenMode notPatXOr
+      else if item 2 of line x of opcodes = "notBic" then
+        PenMode notPatBic
+      else if item 2 of line x of opcodes = "hilite" then
+        PenMode (patCopy + 50)
+      end if
+    else if identical(item 1 of line x of opcodes,"text") then
+      MoveTo item 2 of line x of opcodes,item 3 of line x of opcodes
+      GetFNum item 4 of line x of opcodes,fNum
+      textFont fNum
+      put 0 into fFace
+      if "bold" is in item 5 of line x of opcodes then
+        add 1 to fFace
+      end if
+      if "italic" is in item 5 of line x of opcodes then
+        add 2 to fFace
+      end if
+      if "underline" is in item 5 of line x of opcodes then
+        add 4 to fFace
+      end if
+      if "outline" is in item 5 of line x of opcodes then
+        add 8 to fFace
+      end if
+      if "shadow" is in item 5 of line x of opcodes then
+        add 16 to fFace
+      end if
+      if "condense" is in item 5 of line x of opcodes then
+        add 32 to fFace
+      end if
+      if "extend" is in item 5 of line x of opcodes then
+        add 64 to fFace
+      end if
+      textFace fFace
+      textSize item 6 of line x of opcodes
+      DrawString item 7 of line x of opcodes
+    else if identical(item 1 of line x of opcodes,"clip") then
+      SetRect myRect@,(item 2 of line x of opcodes),(item 3 of line x of opcodes),(item 4 of line x of opcodes),(item 5 of line x of opcodes)
+      ClipRect myRect@
+    else if identical(item 1 of line x of opcodes,"pict") or¬
+    identical(item 1 of line x of opcodes,"dPic") then
+      put getPicture(item 2 of line x of opcodes) into myPicHandle
+      if myPicHandle ≠ nil and number of items of line x of opcodes = 6 then
+        put item 3 of line x of opcodes into pleft
+        put item 4 of line x of opcodes into ptop
+        put item 5 of line x of opcodes into pright
+        put item 6 of line x of opcodes into pbottom
+        SetRect myRect@,pleft,ptop,pright,pbottom
+        DrawPicture myPicHandle,myRect@
+      else if myPicHandle ≠ nil and number of items of line x of opcodes = 4 then
+        put item 3 of line x of opcodes into pleft
+        put item 4 of line x of opcodes into ptop
+        put myPicHandle@@.picFrame into myRect
+        OffsetRect myRect@,pleft,ptop
+        DrawPicture myPicHandle,myRect@
+      end if
+      if char 1 of item 1 of line x of opcodes = "d" then
+        ReleaseResource myPicHandle
+      end if
+    end if
+  end repeat
+  ForeColor blackColor
+  PenNormal
+end Do_DrawStuff
+
+function help
+  return "Syntax: XDraw <Draw|SetPic|NoPic|within>[,<opcodes>]"
+end help
+
+function copyright
+  return "1.0 © 1995 by Uli Kusterer, all rights reserved."
+end copyright
+
+function identical str1, str2
+  if length(str1) ≠ length(str2) then return false
+  repeat with x = 1 to length(str1)
+    if charToNum(char x of str1) ≠ charToNum(char x of str2) then
+      return false
+      exit repeat
+    end if
+  end repeat
+  return true
+end identical
